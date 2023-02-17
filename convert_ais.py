@@ -93,8 +93,8 @@ def process_file(filepath, save_kml=SAVE_KML, save_csv=SAVE_CSV, save_json=SAVE_
     # Apply filter function to chunks in parallel
     # filters to rows in NS1 and NS2
     start_time = time.time()
-    # filtered_data = parallelize_dataframe(df, filter_rows)
-    filtered_data = parallelize_dataframe(df, filter_rows_sneaky)
+    filtered_data = parallelize_dataframe(df, filter_rows)
+    # filtered_data = parallelize_dataframe(df, filter_rows_sneaky)
     end_time = time.time()
     print(
         "Filtered file parallel: ",
@@ -127,7 +127,7 @@ def process_directory(directory, files_processed):
         print("Processing", filepath)
         df = pd.read_csv(filepath)
         filtered_data = parallelize_dataframe(df, filter_rows)
-
+        # filtered_data = parallelize_dataframe(df, filter_rows_sneaky)
         file_stem = OUTPUT + Path(filepath).stem
         filtered_data.to_csv(file_stem + "_filtered.csv", index=False)
 
