@@ -17,11 +17,10 @@ SAVE_KML = True
 SAVE_JSON = True
 OUTPUT = "./output/"
 FILETRACKER = "processed.json"
-COLUMNS = ["MMSI", "Latitude", "Longitude", "# Timestamp"]
+COLUMNS = ["MMSI", "Ship type", "Cargo type", "Width",
+           "Length", "Latitude", "Longitude", "# Timestamp"]
 
 # General parallel execution of a function func for data frame df
-
-
 def parallelize_dataframe(df, func, n_cores=CORES):
     df_split = np.array_split(df, n_cores)
     pool = Pool(n_cores)
@@ -32,8 +31,6 @@ def parallelize_dataframe(df, func, n_cores=CORES):
 
 
 # Create point / time data for each ship
-
-
 def pivot_data(df):
     ship_dict = {}
     for index, row in df.iterrows():
@@ -58,11 +55,11 @@ def filter_rows(df):
     df["Inside NS2"] = points.apply(algos.inside_ns2, axis=1)
     return df.loc[(df["Inside NS1"] == 1) | (df["Inside NS2"] == 1)]
 
+# rostock filter!
 def filter_rows_rostock(df):
     points = df.loc[:, "Latitude":"Longitude"]
-    df["Inside Rostock"] = points.apply(algos.inside_rostock_, axis=1)
+    df["Inside Rostock"] = points.apply(algos.inside_rostock, axis=1)
     return df.loc[df["Inside Rostock"] == 1]
-
 
 # Test for ships that never entered NS1 box but were present just outside of it
 def filter_rows_sneaky(df):
@@ -70,7 +67,6 @@ def filter_rows_sneaky(df):
     df["Inside NS1"] = points.apply(algos.inside_ns1, axis=1)
     df["Inside NS1_large"] = points.apply(algos.inside_ns1_large, axis=1)
     return df.loc[(df["Inside NS1"] == 0) | (df["Inside NS1_large"] == 1)]
-
 
 # Dump KML lines per ship
 def pivot_data_to_kml(ship_dict):
@@ -83,19 +79,18 @@ def pivot_data_to_kml(ship_dict):
         ]
     return kml
 
-
 def process_file(filepath, save_kml=SAVE_KML, save_csv=SAVE_CSV, save_json=SAVE_JSON, filter_func=filter_rows_rostock):
     # Read data as a dataframe. This can be converted to dask
     # for files that are too big for RAM
     start_time = time.time()
     df = pd.read_csv(filepath, usecols=COLUMNS)
     end_time = time.time()
-    print("Read file: ", (end_time - start_time), "seconds", df.shape[0])
+    print("Read file:", (end_time - start_time), "seconds", df.shape[0])
+    print("Rows:", df.shape[0])
 
     # Apply filter function to chunks in parallel
     # filter rows
     start_time = time.time()
-    # filtered_data = parallelize_dataframe(df, filter_rows)
     filtered_data = parallelize_dataframe(df, filter_func)
 
     end_time = time.time()
@@ -139,7 +134,6 @@ def process_directory(directory, files_processed, filter_func=filter_rows_rostoc
         with open(FILETRACKER, "w") as f:
             json.dump(files_processed, f)
 
-
 def merge_and_process(directory):
     merged_df = helper.merge_files(directory)
     merged_df = helper.sort_by_time(merged_df)
@@ -148,7 +142,6 @@ def merge_and_process(directory):
     merged_kml = pivot_data_to_kml(merged_pivoted)
     helper.save_analysis(merged_pivoted, directory + "/filtered_analysis.csv")
     merged_kml.save(directory + "/filtered_data.kml")
-
 
 def main():
 
@@ -191,7 +184,6 @@ def main():
     else:
         parser.print_usage()
         return sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
