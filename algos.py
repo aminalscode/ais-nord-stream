@@ -30,6 +30,14 @@
 # 54°51'47.88"N, 15°26'1.47"E or 54.863300, 15.433742
 # 54°51'47.36"N, 15°23'8.64"E or 54.863156, 15.385733
 
+Rostock_polygon = [
+    (54.2721164, 11.8556471),
+    (54.1605427, 11.9049145),
+    (54.2847705, 12.3018863),
+    (54.3538538, 12.2872045),
+    (54.2721164, 11.8556471),
+]
+
 NS1_polygon = [
     (55.578756, 15.639975),
     (55.581486, 15.840244),
@@ -53,6 +61,8 @@ NS1_large_polygon = [
     (55.70381, 15.37574),
 ]
 
+def inside_rostock_(point):
+    return is_inside_sm(Rostock_polygon, point)
 
 def inside_ns1_large(point):
     return is_inside_sm(NS1_large_polygon, point)
