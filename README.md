@@ -19,3 +19,8 @@ Merge filtered files into csv, json, and kml outputs
 
 Notes:
 1. Processing a directory generates a file "processed.json" which stores processed files. This allows you to resume a job if there's an interruption or partially process. Unless you want to resume where you left off, delete this file before running convert_ais.py in directory mode.
+
+# Weird Imports
+
+This code uses the pyarrow engine which needs to be installed
+`pip3 install pyarrow`
