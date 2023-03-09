@@ -27,7 +27,7 @@ COLUMNS = [
     "Longitude",
     "# Timestamp",
 ]
-SHIP_OF_INTEREST = 211108270
+SHIP_OF_INTEREST = 261002472
 
 
 # General parallel execution of a function func for data frame df
@@ -74,17 +74,16 @@ def filter_rows_rostock(df):
 
 
 # ship filter
+def filter_rows_weick_christianso(df):
+    points = df.loc[:, "Latitude":"Longitude"]
+    df["Weick"] = points.apply(algos.inside_weick, axis=1)
+    df["Christano"] = points.apply(algos.inside_christianso, axis=1)
+    return df.loc[(df["Weick"] == 1) | (df["Christano"] == 1)]
+
+
+# ship filter
 def filter_rows_ship(df):
-    points = df.loc[:, "Latitude":"Longitude"]
     return df.loc[(df["MMSI"] == SHIP_OF_INTEREST)]
-
-
-# Test for ships that never entered NS1 box but were present just outside of it
-def filter_rows_sneaky(df):
-    points = df.loc[:, "Latitude":"Longitude"]
-    df["Inside NS1"] = points.apply(algos.inside_ns1, axis=1)
-    df["Inside NS1_large"] = points.apply(algos.inside_ns1_large, axis=1)
-    return df.loc[(df["Inside NS1"] == 0) & (df["Inside NS1_large"] == 1)]
 
 
 # Dump KML lines per ship
@@ -149,9 +148,17 @@ def filter_directory(directory, files_processed, filter_func=filter_rows_ship):
         if str(filepath) in files_processed:
             continue
         print("Processing", filepath)
+        start_time = time.time()
         df = pd.read_csv(filepath, usecols=COLUMNS, engine="pyarrow")
         filtered_data = parallelize_dataframe(df, filter_func)
-
+        end_time = time.time()
+        print(
+            "Filtered file parallel: ",
+            (end_time - start_time),
+            "seconds",
+            "size",
+            filtered_data.shape[0],
+        )
         file_stem = OUTPUT + Path(filepath).stem
         filtered_data.to_csv(file_stem + "_filtered.csv", index=False)
 
@@ -201,12 +208,10 @@ def main():
     args = parser.parse_args()
 
     if args.file:
-        filter_file(args.file, filter_func=filter_rows_rostock)
+        filter_file(args.file, filter_func=filter_rows_ship)
     elif args.directory:
         print("Processing directory. We have already processed:", files_processed)
-        filter_directory(
-            args.directory, files_processed, filter_func=filter_rows_rostock
-        )
+        filter_directory(args.directory, files_processed, filter_func=filter_rows_ship)
     elif args.merge_directory:
         print("Merging directory")
         merge_and_process(args.merge_directory)
