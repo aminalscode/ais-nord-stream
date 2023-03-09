@@ -5,23 +5,12 @@ from scipy import spatial
 import simplekml
 import json
 
-COLUMNS = [
-    "MMSI",
-    "Ship type",
-    "Cargo type",
-    "Width",
-    "Length",
-    "Latitude",
-    "Longitude",
-    "# Timestamp",
-]
-
 
 def merge_files(directory):
     merged_df = pd.DataFrame()
     for filepath in Path(directory).glob("*filtered.csv"):
         print(filepath)
-        df = pd.read_csv(filepath, usecols=COLUMNS, engine="pyarrow")
+        df = pd.read_csv(filepath, engine="pyarrow")
         merged_df = pd.concat([merged_df, df])
     return merged_df
 
@@ -45,7 +34,7 @@ def merge_original_data(directory, slice=["Latitude", "Longitude"]):
     merged_df = pd.DataFrame()
     for filepath in Path(directory).glob("*.csv"):
         print(filepath)
-        df = pd.read_csv(filepath, usecols=COLUMNS, engine="pyarrow")
+        df = pd.read_csv(filepath, engine="pyarrow")
         df = df.loc[:, slice]
         merged_df = pd.concat([merged_df, df])
     # Filter our weird shit outside of europe
