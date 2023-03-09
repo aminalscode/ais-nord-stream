@@ -17,8 +17,18 @@ SAVE_KML = True
 SAVE_JSON = True
 OUTPUT = "./output/"
 FILETRACKER = "processed.json"
-COLUMNS = ["MMSI", "Ship type", "Cargo type", "Width",
-           "Length", "Latitude", "Longitude", "# Timestamp"]
+COLUMNS = [
+    "MMSI",
+    "Ship type",
+    "Cargo type",
+    "Width",
+    "Length",
+    "Latitude",
+    "Longitude",
+    "# Timestamp",
+]
+SHIP_OF_INTEREST = 211108270
+
 
 # General parallel execution of a function func for data frame df
 def parallelize_dataframe(df, func, n_cores=CORES):
@@ -55,18 +65,27 @@ def filter_rows(df):
     df["Inside NS2"] = points.apply(algos.inside_ns2, axis=1)
     return df.loc[(df["Inside NS1"] == 1) | (df["Inside NS2"] == 1)]
 
+
 # rostock filter!
 def filter_rows_rostock(df):
     points = df.loc[:, "Latitude":"Longitude"]
     df["Inside Rostock"] = points.apply(algos.inside_rostock, axis=1)
-    return df.loc[df["Inside Rostock"] == 1]
+    return df.loc[(df["Inside Rostock"] == 1)]
+
+
+# ship filter
+def filter_rows_ship(df):
+    points = df.loc[:, "Latitude":"Longitude"]
+    return df.loc[(df["MMSI"] == SHIP_OF_INTEREST)]
+
 
 # Test for ships that never entered NS1 box but were present just outside of it
 def filter_rows_sneaky(df):
     points = df.loc[:, "Latitude":"Longitude"]
     df["Inside NS1"] = points.apply(algos.inside_ns1, axis=1)
     df["Inside NS1_large"] = points.apply(algos.inside_ns1_large, axis=1)
-    return df.loc[(df["Inside NS1"] == 0) | (df["Inside NS1_large"] == 1)]
+    return df.loc[(df["Inside NS1"] == 0) & (df["Inside NS1_large"] == 1)]
+
 
 # Dump KML lines per ship
 def pivot_data_to_kml(ship_dict):
@@ -79,13 +98,20 @@ def pivot_data_to_kml(ship_dict):
         ]
     return kml
 
-def process_file(filepath, save_kml=SAVE_KML, save_csv=SAVE_CSV, save_json=SAVE_JSON, filter_func=filter_rows_rostock):
+
+def filter_file(
+    filepath,
+    save_kml=SAVE_KML,
+    save_csv=SAVE_CSV,
+    save_json=SAVE_JSON,
+    filter_func=filter_rows_ship,
+):
     # Read data as a dataframe. This can be converted to dask
     # for files that are too big for RAM
     start_time = time.time()
-    df = pd.read_csv(filepath, usecols=COLUMNS)
+    df = pd.read_csv(filepath, usecols=COLUMNS, engine="pyarrow")
     end_time = time.time()
-    print("Read file:", (end_time - start_time), "seconds", df.shape[0])
+    print("Read file:", (end_time - start_time), "seconds")
     print("Rows:", df.shape[0])
 
     # Apply filter function to chunks in parallel
@@ -118,12 +144,12 @@ def process_file(filepath, save_kml=SAVE_KML, save_csv=SAVE_CSV, save_json=SAVE_
             json.dump(points_data, f)
 
 
-def process_directory(directory, files_processed, filter_func=filter_rows_rostock):
+def filter_directory(directory, files_processed, filter_func=filter_rows_ship):
     for filepath in Path(directory).glob("*.csv"):
         if str(filepath) in files_processed:
             continue
         print("Processing", filepath)
-        df = pd.read_csv(filepath)
+        df = pd.read_csv(filepath, usecols=COLUMNS, engine="pyarrow")
         filtered_data = parallelize_dataframe(df, filter_func)
 
         file_stem = OUTPUT + Path(filepath).stem
@@ -134,6 +160,7 @@ def process_directory(directory, files_processed, filter_func=filter_rows_rostoc
         with open(FILETRACKER, "w") as f:
             json.dump(files_processed, f)
 
+
 def merge_and_process(directory):
     merged_df = helper.merge_files(directory)
     merged_df = helper.sort_by_time(merged_df)
@@ -143,8 +170,8 @@ def merge_and_process(directory):
     helper.save_analysis(merged_pivoted, directory + "/filtered_analysis.csv")
     merged_kml.save(directory + "/filtered_data.kml")
 
-def main():
 
+def main():
     # create output folder
     if not os.path.exists(OUTPUT):
         os.makedirs(OUTPUT)
@@ -174,16 +201,19 @@ def main():
     args = parser.parse_args()
 
     if args.file:
-        process_file(args.file)
+        filter_file(args.file, filter_func=filter_rows_rostock)
     elif args.directory:
         print("Processing directory. We have already processed:", files_processed)
-        process_directory(args.directory, files_processed)
+        filter_directory(
+            args.directory, files_processed, filter_func=filter_rows_rostock
+        )
     elif args.merge_directory:
         print("Merging directory")
         merge_and_process(args.merge_directory)
     else:
         parser.print_usage()
         return sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
