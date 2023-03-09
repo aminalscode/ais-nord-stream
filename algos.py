@@ -30,6 +30,25 @@
 # 54°51'47.88"N, 15°26'1.47"E or 54.863300, 15.433742
 # 54°51'47.36"N, 15°23'8.64"E or 54.863156, 15.385733
 
+
+weick = [
+    (54.4655199, 12.3899958),
+    (54.4223973, 12.3542902),
+    (54.3472236, 12.6811335),
+    (54.479884, 12.8212092),
+    (54.5468499, 12.4641535),
+    (54.4655199, 12.3899958),
+]
+
+christianso = [
+    (55.3764669, 15.1095755),
+    (55.331966, 15.0340445),
+    (55.2537733, 15.2125724),
+    (55.3233724, 15.3347953),
+    (55.3920694, 15.1645072),
+    (55.3764669, 15.1095755),
+]
+
 Rostock_polygon = [
     (54.1765903, 12.0921641),
     (54.1743043, 12.0946747),
@@ -67,12 +86,16 @@ NS1_large_polygon = [
 ]
 
 
+def inside_weick(point):
+    return is_inside_sm(weick, point)
+
+
+def inside_christianso(point):
+    return is_inside_sm(christianso, point)
+
+
 def inside_rostock(point):
     return is_inside_sm(Rostock_polygon, point)
-
-
-def inside_rostock_exit(point):
-    return is_inside_sm(Rostock_polygon_exit, point)
 
 
 def inside_ns1_large(point):
